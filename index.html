@@ -365,6 +365,66 @@
   }
   .google-btn svg{width:18px;height:18px;}
   .login-note{font-size:11.5px;color:var(--muted);margin-top:14px;}
+  .divider{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:18px 0;
+    color:var(--muted);
+    font-size:11.5px;
+    font-family:'IBM Plex Mono',monospace;
+    text-transform:uppercase;
+  }
+  .divider::before,.divider::after{
+    content:'';
+    flex:1;
+    height:1px;
+    background:var(--line);
+  }
+  .email-form{text-align:left;}
+  .email-form label{
+    display:block;
+    font-size:11.5px;
+    color:var(--muted);
+    margin-bottom:4px;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .email-form input{
+    width:100%;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:11px 12px;
+    font-size:14px;
+    font-family:'Inter',sans-serif;
+    margin-bottom:12px;
+    background:#FBFCFD;
+  }
+  .email-form input:focus{outline:none;border-color:var(--blue);}
+  .auth-error{
+    font-size:12.5px;
+    color:var(--danger);
+    background:var(--danger-soft);
+    border-radius:6px;
+    padding:8px 10px;
+    margin-bottom:12px;
+    text-align:left;
+  }
+  .auth-toggle{
+    text-align:center;
+    font-size:12.5px;
+    color:var(--muted);
+    margin-top:12px;
+  }
+  .auth-toggle button{
+    background:none;
+    border:none;
+    color:var(--blue);
+    font-weight:600;
+    font-size:12.5px;
+    cursor:pointer;
+    padding:0;
+    font-family:'Inter',sans-serif;
+  }
 </style>
 </head>
 <body>
@@ -386,13 +446,37 @@
 
   <div id="loginArea" class="login-card">
     <h1>Sign in to start practicing</h1>
-    <p>Sign in with Google so your scores are saved to your own account. Your quiz history stays private to you.</p>
+    <p>Sign in so your scores are saved to your own account. Your quiz history stays private to you.</p>
     <button class="google-btn" onclick="doSignIn()">
       <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.9 32.7 29.4 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.3 0 10.2-2 13.9-5.4l-6.4-5.4C29.4 34.9 26.8 36 24 36c-5.4 0-9.9-3.3-11.3-8l-6.6 5.1C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.9 2.6-2.7 4.8-5 6.2l6.4 5.4C40.4 36.5 44 30.9 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
       Sign in with Google
     </button>
-    <div class="login-note">By signing in, your name and email are used only to save your quiz scores.</div>
+
+    <div class="divider">or</div>
+
+    <div class="email-form">
+      <div id="authError" class="auth-error hidden"></div>
+      <div id="nameField" class="hidden">
+        <label for="authName">Full name</label>
+        <input type="text" id="authName" placeholder="Your name" autocomplete="name">
+      </div>
+      <label for="authEmail">Email</label>
+      <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email">
+      <label for="authPassword">Password</label>
+      <input type="password" id="authPassword" placeholder="At least 6 characters" autocomplete="current-password">
+      <button class="btn btn-primary" style="width:100%" id="authSubmitBtn" onclick="handleEmailAuth()">Sign in</button>
+      <div class="auth-toggle" id="forgotPasswordRow" style="margin-top:10px">
+        <button onclick="handleForgotPassword()">Forgot password?</button>
+      </div>
+    </div>
+
+    <div class="auth-toggle" id="authToggleRow">
+      Don't have an account? <button onclick="toggleAuthMode()">Sign up</button>
+    </div>
+
+    <div class="login-note">Your name and email are used only to save your quiz scores.</div>
   </div>
+
 
   <div id="intro" class="intro hidden">
     <h1>50-question practice run</h1>
@@ -403,6 +487,9 @@
       <div class="stat"><div class="n">50</div><div class="l">This attempt</div></div>
     </div>
     <button class="btn btn-primary" style="width:100%" onclick="startQuiz()">Start practice</button>
+    <div style="text-align:center;margin-top:14px">
+      <button onclick="handleDeleteAccount()" style="background:none;border:none;color:var(--danger);font-size:11.5px;font-family:'IBM Plex Mono',monospace;cursor:pointer;padding:0">Delete my account</button>
+    </div>
   </div>
 
   <div id="quizArea" class="hidden">
@@ -437,13 +524,17 @@
       <div class="bd-card"><div class="n" id="auditScore">0/25</div><div class="l">Auditing</div></div>
       <div class="bd-card"><div class="n" id="taxScore">0/25</div><div class="l">Taxation</div></div>
     </div>
-    <div class="filterrow">
-      <button class="active" data-filter="all" onclick="setFilter('all')">All 50</button>
-      <button data-filter="wrong" onclick="setFilter('wrong')">Missed only</button>
-      <button data-filter="unanswered" onclick="setFilter('unanswered')">Skipped</button>
+    <button class="btn btn-ghost" style="width:100%;margin-top:14px" id="extendBtn" onclick="showDetailedReport()">View detailed report ▾</button>
+    <button class="btn btn-ghost" style="width:100%;margin-top:10px" onclick="restartQuiz()">Restart quiz</button>
+
+    <div id="detailedReport" class="hidden">
+      <div class="filterrow">
+        <button class="active" data-filter="all" onclick="setFilter('all')">All 50</button>
+        <button data-filter="wrong" onclick="setFilter('wrong')">Missed only</button>
+        <button data-filter="unanswered" onclick="setFilter('unanswered')">Skipped</button>
+      </div>
+      <div id="reviewList"></div>
     </div>
-    <div id="reviewList"></div>
-    <button class="btn btn-ghost" style="width:100%;margin-top:14px" onclick="restartQuiz()">Restart quiz</button>
   </div>
 
 </div>
@@ -465,9 +556,18 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 let currentUser = null;
 
+// Explicitly request persistent (survives browser restarts) sign-in state.
+// This is the default in most browsers, but iOS Safari can be aggressive
+// about clearing session state, so we set it explicitly to be safe.
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err=>{
+  console.error('Could not set auth persistence:', err);
+});
+
 function doSignIn(){
   const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(err=>{
+  // Redirect flow is more reliable than a popup on iOS Safari, where
+  // popups can lose their session due to storage partitioning.
+  auth.signInWithRedirect(provider).catch(err=>{
     alert('Sign-in failed: ' + err.message);
   });
 }
@@ -475,6 +575,118 @@ function doSignIn(){
 function doSignOut(){
   auth.signOut();
 }
+
+function handleDeleteAccount(){
+  if(!currentUser) return;
+  const sure = confirm('This will permanently delete your account and all saved quiz scores. This cannot be undone. Continue?');
+  if(!sure) return;
+
+  const uid = currentUser.uid;
+
+  db.collection('attempts').where('uid', '==', uid).get()
+    .then(snapshot => {
+      const batch = db.batch();
+      snapshot.forEach(doc => batch.delete(doc.ref));
+      return batch.commit();
+    })
+    .then(() => currentUser.delete())
+    .then(() => {
+      alert('Your account and scores have been deleted.');
+    })
+    .catch(err => {
+      if(err.code === 'auth/requires-recent-login'){
+        alert('For security, please sign out and sign back in, then try deleting your account again right after signing in.');
+      } else {
+        alert('Could not delete account: ' + err.message);
+      }
+    });
+}
+
+let authMode = 'signin';
+
+function toggleAuthMode(){
+  authMode = authMode === 'signin' ? 'signup' : 'signin';
+  const nameField = document.getElementById('nameField');
+  const submitBtn = document.getElementById('authSubmitBtn');
+  const toggleRow = document.getElementById('authToggleRow');
+  const forgotRow = document.getElementById('forgotPasswordRow');
+  document.getElementById('authError').classList.add('hidden');
+  if(authMode === 'signup'){
+    nameField.classList.remove('hidden');
+    forgotRow.classList.add('hidden');
+    submitBtn.textContent = 'Create account';
+    toggleRow.innerHTML = 'Already have an account? <button onclick="toggleAuthMode()">Sign in</button>';
+  } else {
+    nameField.classList.add('hidden');
+    forgotRow.classList.remove('hidden');
+    submitBtn.textContent = 'Sign in';
+    toggleRow.innerHTML = "Don't have an account? <button onclick=\"toggleAuthMode()\">Sign up</button>";
+  }
+}
+
+function handleForgotPassword(){
+  const email = document.getElementById('authEmail').value.trim();
+  document.getElementById('authError').classList.add('hidden');
+  if(!email){
+    showAuthError('Enter your email above first, then tap "Forgot password?"');
+    return;
+  }
+  auth.sendPasswordResetEmail(email).then(()=>{
+    alert('If an account exists for ' + email + ', a password reset link has been sent.');
+  }).catch(err=>{
+    showAuthError(friendlyAuthError(err));
+  });
+}
+
+function showAuthError(message){
+  const el = document.getElementById('authError');
+  el.textContent = message;
+  el.classList.remove('hidden');
+}
+
+function friendlyAuthError(err){
+  const map = {
+    'auth/invalid-email': 'That email address looks invalid.',
+    'auth/user-not-found': 'No account found with that email. Try signing up instead.',
+    'auth/wrong-password': 'Incorrect password. Please try again.',
+    'auth/email-already-in-use': 'An account already exists with that email. Try signing in instead.',
+    'auth/weak-password': 'Password should be at least 6 characters.',
+    'auth/missing-password': 'Please enter a password.',
+    'auth/invalid-credential': 'Incorrect email or password.'
+  };
+  return map[err.code] || err.message;
+}
+
+function handleEmailAuth(){
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const name = document.getElementById('authName').value.trim();
+  document.getElementById('authError').classList.add('hidden');
+
+  if(!email || !password){
+    showAuthError('Please enter both email and password.');
+    return;
+  }
+
+  if(authMode === 'signup'){
+    if(!name){
+      showAuthError('Please enter your name.');
+      return;
+    }
+    auth.createUserWithEmailAndPassword(email, password)
+      .then(cred => cred.user.updateProfile({ displayName: name }))
+      .catch(err => showAuthError(friendlyAuthError(err)));
+  } else {
+    auth.signInWithEmailAndPassword(email, password)
+      .catch(err => showAuthError(friendlyAuthError(err)));
+  }
+}
+
+auth.getRedirectResult().catch(err=>{
+  if(err && err.message){
+    alert('Sign-in failed: ' + err.message);
+  }
+});
 
 auth.onAuthStateChanged(user=>{
   currentUser = user;
@@ -664,6 +876,8 @@ function showResults(){
   document.getElementById('quizArea').classList.add('hidden');
   document.getElementById('resultsArea').classList.remove('hidden');
   document.getElementById('sectionTabs').classList.add('hidden');
+  document.getElementById('detailedReport').classList.add('hidden');
+  document.getElementById('extendBtn').textContent = 'View detailed report ▾';
 
   let correct = 0, auditCorrect=0, taxCorrect=0;
   questions.forEach((q,i)=>{
@@ -678,7 +892,20 @@ function showResults(){
   document.getElementById('taxScore').textContent = `${taxCorrect}/25`;
 
   saveAttempt(correct, auditCorrect, taxCorrect);
-  renderReview();
+}
+
+function showDetailedReport(){
+  const panel = document.getElementById('detailedReport');
+  const btn = document.getElementById('extendBtn');
+  const isHidden = panel.classList.contains('hidden');
+  if(isHidden){
+    panel.classList.remove('hidden');
+    btn.textContent = 'Hide detailed report ▴';
+    renderReview();
+  } else {
+    panel.classList.add('hidden');
+    btn.textContent = 'View detailed report ▾';
+  }
 }
 
 function setFilter(f){
