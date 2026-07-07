@@ -320,18 +320,80 @@
     background:var(--navy-light);
     padding:5px 10px 5px 5px;
     border-radius:20px;
+    border:none;
+    cursor:pointer;
   }
   .userchip img{width:24px;height:24px;border-radius:50%;}
   .userchip .uname{font-size:12px;color:#fff;font-weight:500;}
-  .userchip .signout{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:10px;
-    color:#F1E6DA;
-    background:rgba(0,0,0,0.2);
-    border:none;
+  .userchip .chevron{color:#F1E6DA;font-size:10px;}
+  .userchip-wrap{position:relative;}
+  .account-menu{
+    position:absolute;
+    top:calc(100% + 10px);
+    right:0;
+    width:min(340px, 88vw);
+    max-height:75vh;
+    overflow-y:auto;
+    background:var(--panel);
+    border:1px solid var(--line);
     border-radius:12px;
-    padding:3px 8px;
+    box-shadow:0 12px 30px rgba(0,0,0,0.18);
+    z-index:50;
+    padding:16px;
+    text-align:left;
+  }
+  .account-menu .who{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:15px;
+    margin-bottom:2px;
+  }
+  .account-menu .who-email{font-size:11.5px;color:var(--muted);margin-bottom:14px;word-break:break-all;}
+  .account-section-title{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--blue);
+    margin:14px 0 8px;
+  }
+  .history-item{
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:9px 10px;
+    margin-bottom:8px;
+    font-size:12.5px;
+  }
+  .history-item .row1{display:flex;justify-content:space-between;font-weight:600;}
+  .history-item .row2{color:var(--muted);font-size:11px;margin-top:2px;}
+  .sw-bar-row{margin-bottom:10px;}
+  .sw-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;}
+  .sw-track{height:8px;background:var(--line);border-radius:4px;overflow:hidden;}
+  .sw-fill{height:100%;background:var(--blue);}
+  .sw-note{
+    font-size:12px;
+    background:var(--amber-soft);
+    color:#8A5A17;
+    border-radius:6px;
+    padding:8px 10px;
+    margin-top:6px;
+  }
+  .account-actions{
+    display:flex;
+    gap:8px;
+    margin-top:16px;
+    padding-top:14px;
+    border-top:1px solid var(--line);
+  }
+  .account-actions button{flex:1;}
+  .link-danger{
+    background:none;
+    border:none;
+    color:var(--danger);
+    font-size:11.5px;
+    font-family:'IBM Plex Mono',monospace;
     cursor:pointer;
+    padding:0;
   }
   .login-card{
     background:var(--panel);
@@ -433,10 +495,29 @@
   <div class="brand">JUPEB CBT PRACTICE<small>ACC 003 · ACC 004</small></div>
   <div style="display:flex;align-items:center;gap:8px">
     <div class="clock hidden" id="clock">00:00</div>
-    <div class="userchip hidden" id="userChip">
-      <img id="userPhoto" src="" alt="">
-      <span class="uname" id="userName"></span>
-      <button class="signout" onclick="doSignOut()">Sign out</button>
+    <div class="userchip-wrap">
+      <button class="userchip hidden" id="userChip" onclick="toggleAccountMenu()">
+        <img id="userPhoto" src="" alt="">
+        <span class="uname" id="userName"></span>
+        <span class="chevron">▾</span>
+      </button>
+      <div class="account-menu hidden" id="accountMenu" onclick="event.stopPropagation()">
+        <div class="who" id="menuName"></div>
+        <div class="who-email" id="menuEmail"></div>
+
+        <div class="account-section-title">Strengths &amp; weaknesses</div>
+        <div id="swBox"><p style="font-size:12px;color:var(--muted)">Loading…</p></div>
+
+        <div class="account-section-title">Previous attempts</div>
+        <div id="historyBox"><p style="font-size:12px;color:var(--muted)">Loading…</p></div>
+
+        <div class="account-actions">
+          <button class="btn btn-ghost" onclick="doSignOut()">Sign out</button>
+        </div>
+        <div style="text-align:center;margin-top:12px">
+          <button class="link-danger" onclick="handleDeleteAccount()">Delete my account</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -487,9 +568,6 @@
       <div class="stat"><div class="n">50</div><div class="l">This attempt</div></div>
     </div>
     <button class="btn btn-primary" style="width:100%" onclick="startQuiz()">Start practice</button>
-    <div style="text-align:center;margin-top:14px">
-      <button onclick="handleDeleteAccount()" style="background:none;border:none;color:var(--danger);font-size:11.5px;font-family:'IBM Plex Mono',monospace;cursor:pointer;padding:0">Delete my account</button>
-    </div>
   </div>
 
   <div id="quizArea" class="hidden">
@@ -699,12 +777,106 @@ auth.onAuthStateChanged(user=>{
     userChip.classList.remove('hidden');
     document.getElementById('userName').textContent = (user.displayName || user.email || 'Student').split(' ')[0];
     document.getElementById('userPhoto').src = user.photoURL || '';
+    document.getElementById('menuName').textContent = user.displayName || 'Student';
+    document.getElementById('menuEmail').textContent = user.email || '';
   } else {
     loginArea.classList.remove('hidden');
     introArea.classList.add('hidden');
     userChip.classList.add('hidden');
+    document.getElementById('accountMenu').classList.add('hidden');
   }
 });
+
+function toggleAccountMenu(){
+  const menu = document.getElementById('accountMenu');
+  const isHidden = menu.classList.contains('hidden');
+  if(isHidden){
+    menu.classList.remove('hidden');
+    loadAccountData();
+  } else {
+    menu.classList.add('hidden');
+  }
+}
+
+document.addEventListener('click', (e)=>{
+  const menu = document.getElementById('accountMenu');
+  const chip = document.getElementById('userChip');
+  if(!menu.classList.contains('hidden') && !menu.contains(e.target) && e.target !== chip && !chip.contains(e.target)){
+    menu.classList.add('hidden');
+  }
+});
+
+function loadAccountData(){
+  if(!currentUser) return;
+  const swBox = document.getElementById('swBox');
+  const historyBox = document.getElementById('historyBox');
+  swBox.innerHTML = '<p style="font-size:12px;color:var(--muted)">Loading…</p>';
+  historyBox.innerHTML = '<p style="font-size:12px;color:var(--muted)">Loading…</p>';
+
+  db.collection('attempts').where('uid', '==', currentUser.uid).get()
+    .then(snapshot => {
+      const attempts = [];
+      snapshot.forEach(doc => attempts.push(doc.data()));
+      attempts.sort((a,b) => {
+        const ta = a.timestamp ? a.timestamp.toMillis() : 0;
+        const tb = b.timestamp ? b.timestamp.toMillis() : 0;
+        return tb - ta;
+      });
+      renderStrengthsWeaknesses(attempts);
+      renderHistory(attempts);
+    })
+    .catch(err => {
+      swBox.innerHTML = '<p style="font-size:12px;color:var(--danger)">Could not load data.</p>';
+      historyBox.innerHTML = '';
+      console.error(err);
+    });
+}
+
+function renderStrengthsWeaknesses(attempts){
+  const swBox = document.getElementById('swBox');
+  if(attempts.length === 0){
+    swBox.innerHTML = '<p style="font-size:12px;color:var(--muted)">Take a quiz to see your strengths and weaknesses here.</p>';
+    return;
+  }
+  let auditTotal = 0, taxTotal = 0;
+  attempts.forEach(a => {
+    auditTotal += (a.auditScore || 0);
+    taxTotal += (a.taxScore || 0);
+  });
+  const auditPct = Math.round((auditTotal / (attempts.length * 25)) * 100);
+  const taxPct = Math.round((taxTotal / (attempts.length * 25)) * 100);
+  const weaker = auditPct === taxPct ? null : (auditPct < taxPct ? 'Auditing (ACC 003)' : 'Taxation (ACC 004)');
+
+  swBox.innerHTML = `
+    <div class="sw-bar-row">
+      <div class="sw-label"><span>Auditing</span><span>${auditPct}%</span></div>
+      <div class="sw-track"><div class="sw-fill" style="width:${auditPct}%"></div></div>
+    </div>
+    <div class="sw-bar-row">
+      <div class="sw-label"><span>Taxation</span><span>${taxPct}%</span></div>
+      <div class="sw-track"><div class="sw-fill" style="width:${taxPct}%"></div></div>
+    </div>
+    ${weaker ? `<div class="sw-note">Based on ${attempts.length} attempt${attempts.length>1?'s':''}, ${weaker} looks like your weaker area — worth extra practice.</div>` : `<div class="sw-note">Your average performance is even across both subjects.</div>`}
+  `;
+}
+
+function renderHistory(attempts){
+  const historyBox = document.getElementById('historyBox');
+  if(attempts.length === 0){
+    historyBox.innerHTML = '<p style="font-size:12px;color:var(--muted)">No attempts yet.</p>';
+    return;
+  }
+  historyBox.innerHTML = attempts.slice(0, 10).map(a => {
+    const date = a.timestamp ? a.timestamp.toDate().toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'}) : 'Just now';
+    const time = a.timestamp ? a.timestamp.toDate().toLocaleTimeString(undefined, {hour:'2-digit', minute:'2-digit'}) : '';
+    return `
+      <div class="history-item">
+        <div class="row1"><span>${a.score}/${a.total || 50}</span><span>${Math.round((a.score/(a.total||50))*100)}%</span></div>
+        <div class="row2">${date} ${time} · Auditing ${a.auditScore}/25 · Taxation ${a.taxScore}/25</div>
+      </div>
+    `;
+  }).join('');
+}
 
 function saveAttempt(correct, auditCorrect, taxCorrect){
   if(!currentUser) return;
