@@ -691,10 +691,24 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err=>{
 
 function doSignIn(){
   const provider = new firebase.auth.GoogleAuthProvider();
-  // Redirect flow is more reliable than a popup on iOS Safari, where
-  // popups can lose their session due to storage partitioning.
-  auth.signInWithRedirect(provider).catch(err=>{
-    alert('Sign-in failed: ' + err.message);
+  // Popup keeps the sign-in flow within the same tab (via window messaging)
+  // rather than a full page redirect, which tends to be more reliable on
+  // iOS Safari due to its cross-site storage restrictions. If the popup is
+  // blocked or unsupported in this browser, fall back to redirect.
+  auth.signInWithPopup(provider).catch(err=>{
+    if(err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request'){
+      return; // user closed it themselves — no need to alert or fall back
+    }
+    const fallbackCodes = ['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment'];
+    if(fallbackCodes.includes(err.code)){
+      auth.signInWithRedirect(provider).catch(err2=>{
+        console.error('Redirect sign-in failed:', err2);
+        alert('Sign-in failed: ' + err2.message);
+      });
+    } else {
+      console.error('Popup sign-in failed:', err);
+      alert('Sign-in failed: ' + err.message);
+    }
   });
 }
 
